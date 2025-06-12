@@ -12,8 +12,7 @@ RUN apt-get update && apt-get install -y \
     zlib1g-dev \
     libssl-dev
 
-WORKDIR /usr/src
-
+WORKDIR /usr/src/nginx-otel
 RUN wget https://nginx.org/download/nginx-1.27.4.tar.gz && \
     tar zxvf nginx-1.27.4.tar.gz && \
     cd nginx-1.27.4 && \
