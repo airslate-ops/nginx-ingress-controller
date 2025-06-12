@@ -16,7 +16,7 @@ jobs:
 
       - name: Build VTS module with Docker
         run: |
-          docker build -f Dockerfile.vts -t vts-builder .
+          docker build -f build/Dockerfile.vts -t vts-builder .
           docker create --name extract vts-builder
           docker cp extract:/nginx-1.27.4/objs/ngx_http_vhost_traffic_status_module.so .
           docker rm extract
