@@ -1,0 +1,29 @@
+name: Build and release VTS module
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "vts-*"
+
+jobs:
+  build-vts:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Build VTS module with Docker
+        run: |
+          docker build -f Dockerfile.vts -t vts-builder .
+          docker create --name extract vts-builder
+          docker cp extract:/nginx-1.27.4/objs/ngx_http_vhost_traffic_status_module.so .
+          docker rm extract
+
+      - name: Upload VTS module as GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ./ngx_http_vhost_traffic_status_module.so
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

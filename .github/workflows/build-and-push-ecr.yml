@@ -1,0 +1,64 @@
+name: Build and push nginx ingress image
+
+on:
+  push:
+    branches:
+      - 'master'
+    tags:
+      - '**'
+    paths-ignore:
+      - '**.md'
+  pull_request:
+    branches:
+      - '**'
+
+env:
+  IMAGE_NAME: "nginx-ingress-controller"
+  AWS_REGION: us-east-1
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  ECR_REPOSITORY: "868276123740.dkr.ecr.us-east-1.amazonaws.com/common/pdffiller/nginx-ingress-controller"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+
+      - name: Set BUILD_ID
+        run: echo "BUILD_ID=$(echo $GITHUB_REF_NAME | sed 's#/#-#g')" >> $GITHUB_ENV
+
+      - name: Build docker image
+        run: |
+          docker build \
+            --build-arg BUILD_OS=debian \
+            --build-arg DOWNLOAD_TAG=edge \
+            --build-arg IMAGE_NAME=${{ env.IMAGE_NAME }} \
+            -t ${{ env.IMAGE_NAME }}:${{ env.BUILD_ID }} .
+
+      - name: Configure AWS credentials
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.COMMON_PROD_ECR_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Tag image for ECR
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          docker tag ${{ env.IMAGE_NAME }}:${{ env.BUILD_ID }} \
+            ${{ env.ECR_REPOSITORY }}:${{ env.BUILD_ID }}
+
+      - name: Push image to ECR
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          docker push ${{ env.ECR_REPOSITORY }}:${{ env.BUILD_ID }}

@@ -28,8 +28,14 @@ RUN apk add --no-cache libcap libstdc++
 FROM nginx:1.27.4@sha256:09369da6b10306312cd908661320086bf87fbae1b6b0c49a1f50ba531fef2eab AS debian
 
 RUN apt-get update \
-	&& apt-get install --no-install-recommends --no-install-suggests -y libcap2-bin
+	&& apt-get install --no-install-recommends --no-install-suggests -y \
+        libcap2-bin \
+        libc-ares2 \
+    && rm -rf /var/lib/apt/lists/*
 
+COPY --from=vts-builder /nginx-1.27.4/objs/ngx_http_vhost_traffic_status_module.so /etc/nginx/modules/
+COPY --from=otel-builder /usr/src/nginx-otel/build/ngx_otel_module.so /etc/nginx/modules/
+COPY --from=brotli-builder /usr/src/nginx-1.27.4/objs/ngx_http_brotli_filter_module.so /etc/nginx/modules/
 
 ############################################# NGINX files #############################################
 FROM scratch AS nginx-files
