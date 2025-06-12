@@ -2,15 +2,8 @@ name: Build and push nginx ingress image
 
 on:
   push:
-    branches:
-      - 'master'
     tags:
-      - '**'
-    paths-ignore:
-      - '**.md'
-  pull_request:
-    branches:
-      - '**'
+      - 'nginx-*'
 
 env:
   IMAGE_NAME: "nginx-ingress-controller"

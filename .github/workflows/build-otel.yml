@@ -18,7 +18,7 @@ jobs:
         run: |
           docker build -f build/Dockerfile.otel -t otel-builder .
           docker create --name extract otel-builder
-          docker cp extract:/usr/src/nginx-1.27.4/objs/ngx_otel_module.so .
+          docker cp extract:/usr/src/nginx-otel/build/ngx_otel_module.so .
           docker rm extract
 
       - name: Upload OTEL module to GitHub Release
