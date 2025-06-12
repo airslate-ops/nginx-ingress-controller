@@ -1,0 +1,29 @@
+name: Build and release Brotli NGINX module
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "brotli-*"
+
+jobs:
+  build-brotli:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+
+      - name: Build Brotli module
+        run: |
+          docker build -f build/Dockerfile.brotli -t brotli-builder .
+          docker create --name extract brotli-builder
+          docker cp extract:/usr/src/nginx-1.27.4/objs/ngx_http_brotli_filter_module.so .
+          docker rm extract
+
+      - name: Upload Brotli module to GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ./ngx_http_brotli_filter_module.so
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
