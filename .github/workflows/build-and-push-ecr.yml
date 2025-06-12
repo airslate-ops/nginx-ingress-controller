@@ -28,7 +28,7 @@ jobs:
 
       - name: Build docker image
         run: |
-          docker build \
+          docker build -f build/Dockerfile\
             --build-arg BUILD_OS=debian \
             --build-arg DOWNLOAD_TAG=edge \
             --build-arg IMAGE_NAME=${{ env.IMAGE_NAME }} \
