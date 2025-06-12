@@ -38,9 +38,9 @@ RUN apt-get update \
         libc-ares2 \
     && rm -rf /var/lib/apt/lists/*
 
-ADD https://github.com/airslate-ops/kubernetes-ingress/releases/download/${VTS_VERSION}/ngx_http_vhost_traffic_status_module.so /etc/nginx/modules/
-ADD https://github.com/airslate-ops/kubernetes-ingress/releases/download/${OTEL_VERSION}/ngx_otel_module.so /etc/nginx/modules/
-ADD https://github.com/airslate-ops/kubernetes-ingress/releases/download/${BROTLI_VERSION}/ngx_http_brotli_filter_module.so /etc/nginx/modules/
+ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${VTS_VERSION}/ngx_http_vhost_traffic_status_module.so /etc/nginx/modules/
+ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${OTEL_VERSION}/ngx_otel_module.so /etc/nginx/modules/
+ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${BROTLI_VERSION}/ngx_http_brotli_filter_module.so /etc/nginx/modules/
 
 ############################################# NGINX files #############################################
 FROM scratch AS nginx-files
