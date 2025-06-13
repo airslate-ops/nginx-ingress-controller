@@ -19,11 +19,14 @@ jobs:
           docker build -f build/Dockerfile.brotli -t brotli-builder .
           docker create --name extract brotli-builder
           docker cp extract:/usr/src/nginx-1.27.4/objs/ngx_http_brotli_filter_module.so .
+          docker cp extract:/usr/src/nginx-1.27.4/objs/ngx_http_brotli_static_module.so .
           docker rm extract
 
-      - name: Upload Brotli module to GitHub Release
+      - name: Upload Brotli modules to GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: ./ngx_http_brotli_filter_module.so
+          files: |
+            ./ngx_http_brotli_filter_module.so
+            ./ngx_http_brotli_static_module.so
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
