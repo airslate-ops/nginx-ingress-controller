@@ -42,6 +42,8 @@ ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/$
 ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${OTEL_VERSION}/ngx_otel_module.so /etc/nginx/modules/
 ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${BROTLI_VERSION}/ngx_http_brotli_filter_module.so /etc/nginx/modules/
 
+RUN find /usr/lib/nginx/modules -type f -name '*.so' -exec chmod 644 {} \;
+
 ############################################# NGINX files #############################################
 FROM scratch AS nginx-files
 ARG IC_VERSION
