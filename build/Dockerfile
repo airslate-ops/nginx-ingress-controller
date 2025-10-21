@@ -30,6 +30,7 @@ FROM nginx:1.27.4@sha256:09369da6b10306312cd908661320086bf87fbae1b6b0c49a1f50ba5
 ARG VTS_VERSION=vts-1.0.0
 ARG OTEL_VERSION=otel-1.0.0
 ARG BROTLI_VERSION=brotli-1.0.1
+ARG LUA_VERSION=otel-1.0.0
 
 
 RUN apt-get update \
@@ -42,6 +43,8 @@ ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/$
 ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${OTEL_VERSION}/ngx_otel_module.so /etc/nginx/modules/
 ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${BROTLI_VERSION}/ngx_http_brotli_filter_module.so /etc/nginx/modules/
 ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${BROTLI_VERSION}/ngx_http_brotli_static_module.so /etc/nginx/modules/
+ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${LUA_VERSION}/ndk_http_module.so /etc/nginx/modules/
+ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${LUA_VERSION}/nngx_http_lua_module.so /etc/nginx/modules/
 
 RUN find /usr/lib/nginx/modules -type f -name '*.so' -exec chmod 644 {} \;
 ############################################# NGINX files #############################################
