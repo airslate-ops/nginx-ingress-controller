@@ -16,7 +16,7 @@ jobs:
 
       - name: Build Lua module
         run: |
-          docker build -f build/Dockerfile.lua -t lua-builder .
+          docker build -f build/Dockerfile.luam -t lua-builder .
           docker create --name extract lua-builder
           docker cp extract:/usr/src/nginx-1.27.4/objs/ndk_http_module.so .
           docker cp extract:/usr/src/nginx-1.27.4/objs/ngx_http_lua_module.so .
