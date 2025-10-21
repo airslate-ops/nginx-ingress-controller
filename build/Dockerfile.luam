@@ -1,0 +1,22 @@
+FROM nginx:1.27.4 as lua-builder
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpcre3-dev \
+    zlib1g-dev \
+    libssl-dev \
+    git \
+    wget \
+    libluajit-5.1-dev
+
+WORKDIR /usr/src
+
+RUN git clone --branch v0.3.2 https://github.com/simpl/ngx_devel_kit.git
+RUN git clone --branch v0.10.25 https://github.com/openresty/lua-nginx-module.git
+RUN wget http://nginx.org/download/nginx-1.27.4.tar.gz && tar zxvf nginx-1.27.4.tar.gz
+
+WORKDIR /usr/src/nginx-1.27.4
+RUN ./configure --with-compat \
+    --add-dynamic-module=../ngx_devel_kit \
+    --add-dynamic-module=../lua-nginx-module \
+    && make modules
