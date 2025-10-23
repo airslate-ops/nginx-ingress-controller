@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /usr/src
 
-RUN wget https://ftp.pcre.org/pub/pcre/pcre2-10.42.tar.gz && \
+RUN wget https://github.com/PhilipHazel/pcre2/releases/download/pcre2-10.42/pcre2-10.42.tar.gz && \
     tar zxvf pcre2-10.42.tar.gz && \
     cd pcre2-10.42 && \
     ./configure --prefix=/usr/local --enable-jit && \
