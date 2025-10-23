@@ -11,14 +11,17 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /usr/src
 RUN git clone https://github.com/openresty/luajit2.git --branch v2.1-agentzh --single-branch
 WORKDIR /usr/src/luajit2
-RUN make && make install PREFIX=/usr/local
+RUN make && make install
+
+ENV PATH="/usr/local/bin:${PATH}"
+ENV LD_LIBRARY_PATH="/usr/local/lib:${LD_LIBRARY_PATH}"
 
 WORKDIR /usr/src
 RUN git clone --branch v0.3.2 https://github.com/simpl/ngx_devel_kit.git
 RUN git clone --branch v0.10.25 https://github.com/openresty/lua-nginx-module.git
 RUN wget http://nginx.org/download/nginx-1.27.4.tar.gz && tar zxvf nginx-1.27.4.tar.gz
-WORKDIR /usr/src/nginx-1.27.4
 
+WORKDIR /usr/src/nginx-1.27.4
 ENV LUAJIT_LIB=/usr/local/lib
 ENV LUAJIT_INC=/usr/local/include/luajit-2.1
 
