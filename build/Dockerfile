@@ -37,6 +37,7 @@ RUN apt-get update \
 	&& apt-get install --no-install-recommends --no-install-suggests -y \
         libcap2-bin \
         libc-ares2 \
+        ibluajit-5.1-2 \
     && rm -rf /var/lib/apt/lists/*
 
 ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${VTS_VERSION}/ngx_http_vhost_traffic_status_module.so /etc/nginx/modules/
