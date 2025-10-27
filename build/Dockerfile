@@ -30,25 +30,26 @@ FROM nginx:1.27.4@sha256:09369da6b10306312cd908661320086bf87fbae1b6b0c49a1f50ba5
 ARG VTS_VERSION=vts-1.0.0
 ARG OTEL_VERSION=otel-1.0.0
 ARG BROTLI_VERSION=brotli-1.0.1
-ARG LUA_VERSION=lua-1.0.2
+ARG LUA_VERSION=lua-1.0.11
 
+ENV MODULES_DIR=/usr/lib/nginx/modules
 
 RUN apt-get update \
-    && apt-get install --no-install-recommends --no-install-suggests -y \
-        libcap2-bin \
-        libc-ares2 \
-        libluajit-5.1-2 \
-        libpcre3 \
-    && rm -rf /var/lib/apt/lists/*
+ && apt-get install --no-install-recommends --no-install-suggests -y \
+      libcap2-bin \
+      libc-ares2 \
+      libluajit-5.1-2 \
+      libpcre2-8-0 \
+ && rm -rf /var/lib/apt/lists/*
 
-ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${VTS_VERSION}/ngx_http_vhost_traffic_status_module.so /etc/nginx/modules/
-ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${OTEL_VERSION}/ngx_otel_module.so /etc/nginx/modules/
-ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${BROTLI_VERSION}/ngx_http_brotli_filter_module.so /etc/nginx/modules/
-ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${BROTLI_VERSION}/ngx_http_brotli_static_module.so /etc/nginx/modules/
-ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${LUA_VERSION}/ndk_http_module.so /etc/nginx/modules/
-ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${LUA_VERSION}/ngx_http_lua_module.so /etc/nginx/modules/
+ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${VTS_VERSION}/ngx_http_vhost_traffic_status_module.so ${MODULES_DIR}/
+ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${OTEL_VERSION}/ngx_otel_module.so ${MODULES_DIR}/
+ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${BROTLI_VERSION}/ngx_http_brotli_filter_module.so ${MODULES_DIR}/
+ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${BROTLI_VERSION}/ngx_http_brotli_static_module.so ${MODULES_DIR}/
+ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${LUA_VERSION}/ndk_http_module.so ${MODULES_DIR}/
+ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${LUA_VERSION}/ngx_http_lua_module.so ${MODULES_DIR}/
 
-RUN find /usr/lib/nginx/modules -type f -name '*.so' -exec chmod 644 {} \;
+RUN find ${MODULES_DIR} -type f -name '*.so' -exec chmod 0644 {} \; && ldconfig
 ############################################# NGINX files #############################################
 FROM scratch AS nginx-files
 ARG IC_VERSION
