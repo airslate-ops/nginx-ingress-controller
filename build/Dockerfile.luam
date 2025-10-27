@@ -1,8 +1,15 @@
-FROM nginx:1.27.4 as lua-builder
+FROM nginx:1.27.4 AS lua-builder
 
 RUN apt-get update && apt-get install -y \
-    build-essential zlib1g-dev libssl-dev git wget ca-certificates libreadline-dev \
+    build-essential \
+    pkg-config \
     libpcre2-dev \
+    zlib1g-dev \
+    libssl-dev \
+    libreadline-dev \
+    git \
+    wget \
+    ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src
@@ -12,17 +19,21 @@ WORKDIR /usr/src/luajit2
 RUN make -j"$(nproc)" && make install
 
 ENV PATH="/usr/local/bin:${PATH}"
-ENV LD_LIBRARY_PATH="/usr/local/lib:${LD_LIBRARY_PATH}"
+ENV LD_LIBRARY_PATH="/usr/local/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
 WORKDIR /usr/src
-RUN git clone --branch v0.3.2  https://github.com/simpl/ngx_devel_kit.git
-RUN git clone --branch v0.10.25 https://github.com/openresty/lua-nginx-module.git
+
+ARG NDK_V=v0.3.3
+ARG LUA_NGX_V=v0.10.27
+RUN git clone --branch ${NDK_V} --single-branch https://github.com/simpl/ngx_devel_kit.git
+RUN git clone --branch ${LUA_NGX_V} --single-branch https://github.com/openresty/lua-nginx-module.git
 
 ARG NGINX_V=1.27.4
 RUN wget http://nginx.org/download/nginx-${NGINX_V}.tar.gz \
  && tar zxf nginx-${NGINX_V}.tar.gz
 
 WORKDIR /usr/src/nginx-${NGINX_V}
+
 ENV LUAJIT_LIB=/usr/local/lib
 ENV LUAJIT_INC=/usr/local/include/luajit-2.1
 
@@ -30,6 +41,6 @@ RUN ./configure --with-compat \
     --add-dynamic-module=../ngx_devel_kit \
     --add-dynamic-module=../lua-nginx-module \
     --with-ld-opt="-Wl,-rpath,/usr/local/lib" \
- || { echo '--- CONFIG.LOG ---'; cat objs/autoconf.err 2>/dev/null || true; exit 1; }
+ || { echo '--- autoconf.err ---'; cat objs/autoconf.err 2>/dev/null || true; exit 1; }
 
-RUN make modules -j"$(nproc)"
+RUN make modules -j"$(nproc)" V=1 || { echo '--- make failed ---'; exit 1; }
