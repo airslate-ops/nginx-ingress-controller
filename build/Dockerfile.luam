@@ -1,19 +1,16 @@
+# -------- builder: lua/ndk dynamic modules for nginx 1.27.4 (PCRE2) --------
 FROM nginx:1.27.4 AS lua-builder
 
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    pkg-config \
-    libpcre2-dev \
-    zlib1g-dev \
-    libssl-dev \
-    libreadline-dev \
-    git \
-    wget \
-    ca-certificates \
+# Мінімум потрібного + інструменти для саніті-чеків (objdump/readelf)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential pkg-config \
+    libpcre2-dev zlib1g-dev libssl-dev libreadline-dev \
+    git wget ca-certificates binutils \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src
 
+# ---- LuaJIT (runtime буде підсовуватись окремо/системний) ----
 RUN git clone --branch v2.1-agentzh --single-branch https://github.com/openresty/luajit2.git
 WORKDIR /usr/src/luajit2
 RUN make -j"$(nproc)" && make install
@@ -21,26 +18,49 @@ RUN make -j"$(nproc)" && make install
 ENV PATH="/usr/local/bin:${PATH}"
 ENV LD_LIBRARY_PATH="/usr/local/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
+# ---- NDK + lua-nginx-module (сумісні з 1.27.x) ----
 WORKDIR /usr/src
-
 ARG NDK_V=v0.3.3
 ARG LUA_NGX_V=v0.10.27
-RUN git clone --branch ${NDK_V} --single-branch https://github.com/simpl/ngx_devel_kit.git
-RUN git clone --branch ${LUA_NGX_V} --single-branch https://github.com/openresty/lua-nginx-module.git
+RUN git clone --branch "${NDK_V}" --single-branch https://github.com/simpl/ngx_devel_kit.git
+RUN git clone --branch "${LUA_NGX_V}" --single-branch https://github.com/openresty/lua-nginx-module.git
 
+# ---- NGINX sources (точно 1.27.4) ----
 ARG NGINX_V=1.27.4
-RUN wget http://nginx.org/download/nginx-${NGINX_V}.tar.gz \
- && tar zxf nginx-${NGINX_V}.tar.gz
+RUN wget -O "nginx-${NGINX_V}.tar.gz" "http://nginx.org/download/nginx-${NGINX_V}.tar.gz" \
+ && tar zxf "nginx-${NGINX_V}.tar.gz"
 
 WORKDIR /usr/src/nginx-${NGINX_V}
 
+# LuaJIT include/lib for lua-nginx-module
 ENV LUAJIT_LIB=/usr/local/lib
 ENV LUAJIT_INC=/usr/local/include/luajit-2.1
 
+# ВАЖЛИВО: НЕ додаємо --with-pcre=..., авто-детект підійме PCRE2 з libpcre2-dev
 RUN ./configure --with-compat \
     --add-dynamic-module=../ngx_devel_kit \
     --add-dynamic-module=../lua-nginx-module \
     --with-ld-opt="-Wl,-rpath,/usr/local/lib" \
  || { echo '--- autoconf.err ---'; cat objs/autoconf.err 2>/dev/null || true; exit 1; }
 
-RUN make modules -j"$(nproc)" V=1 || { echo '--- make failed ---'; exit 1; }
+# Переконаймося, що NGINX побачив PCRE2
+RUN grep -q '^[[:space:]]*#define[[:space:]]\+NGX_PCRE2[[:space:]]\+1' objs/ngx_auto_config.h \
+ || { echo 'ERROR: NGX_PCRE2 not defined. PCRE2 was not detected.'; exit 1; }
+
+# Збираємо модулі з докладним логом
+RUN make modules -j"$(nproc)" V=1
+
+# Саніті-чек: у готовому .so НЕ повинно бути символів pcre_*
+RUN objdump -T objs/ngx_http_lua_module.so | grep -i '\bpcre_' && { echo 'ERROR: lua module links to PCRE1 symbols'; exit 1; } || true
+RUN readelf -d objs/ngx_http_lua_module.so | grep -i 'NEEDED.*libpcre' && { echo 'ERROR: lua module NEEDS libpcre (PCRE1)'; exit 1; } || true
+
+# Викладаємо артефакти у зрозуміле місце
+RUN mkdir -p /artifacts
+RUN install -m 0644 objs/ndk_http_module.so /artifacts/ndk_http_module.so
+RUN install -m 0644 objs/ngx_http_lua_module.so /artifacts/ngx_http_lua_module.so
+# додатково: покладемо runtime-лібу LuaJIT (якщо хочеш самодостатній артефакт)
+RUN install -m 0644 /usr/local/lib/libluajit-5.1.so.2 /artifacts/libluajit-5.1.so.2 || true
+
+# Маніфест + SHA256 — корисно для перевірок у “основному” образі/CI
+RUN sh -c 'cat > /artifacts/manifest.yaml <<EOF\nmodule_set:\n  nginx_version: "'"${NGINX_V}"'"\n  ndk_version: "'"${NDK_V}"'"\n  lua_module_version: "'"${LUA_NGX_V}"'"\n  pcre2: true\n  built_with_compat: true\n  luajit: "2.1 (openresty/luajit2)"\nartifacts:\n  - ndk_http_module.so\n  - ngx_http_lua_module.so\n  - libluajit-5.1.so.2\nEOF'
+RUN sh -c 'cd /artifacts && sha256sum * > SHA256SUMS'
