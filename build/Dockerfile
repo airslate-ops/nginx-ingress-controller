@@ -49,7 +49,7 @@ RUN install -D -m 0644 /usr/local/lib/libluajit-5.1.so.2 /usr/lib/x86_64-linux-g
  && printf "/usr/local/lib\n/usr/lib/x86_64-linux-gnu\n" > /etc/ld.so.conf.d/zz-nginx-luajit.conf \
  && ldconfig
 
-ARG RESTY_CORE_VER=0.1.28
+ARG RESTY_CORE_VER=0.1.29
 ARG RESTY_LRU_VER=0.13
 
 ENV LUA_PATH="/usr/local/share/lua/5.1/?.lua;/usr/local/share/lua/5.1/?/init.lua;./?.lua;;"
