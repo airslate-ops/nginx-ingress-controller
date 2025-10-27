@@ -12,21 +12,41 @@ jobs:
 
     steps:
       - name: Checkout source
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Build Lua module
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build modules (linux/amd64) and export artifacts
         run: |
-          docker build -f build/Dockerfile.luam -t lua-builder .
-          docker create --name extract lua-builder
-          docker cp extract:/usr/src/nginx-1.27.4/objs/ndk_http_module.so .
-          docker cp extract:/usr/src/nginx-1.27.4/objs/ngx_http_lua_module.so .
-          docker rm extract
+          docker buildx build \
+            --platform=linux/amd64 \
+            -f build/Dockerfile.luam \
+            --target out \
+            --output type=local,dest=./artifacts \
+            --progress=plain \
+            --no-cache \
+            .
+
+      - name: List artifacts
+        run: ls -lah artifacts
+
+      - name: Create checksums
+        run: |
+          cd artifacts
+          sha256sum * > SHA256SUMS
 
       - name: Upload Lua modules to GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            ./ndk_http_module.so
-            ./ngx_http_lua_module.so
+            artifacts/ndk_http_module.so
+            artifacts/ngx_http_lua_module.so
+            artifacts/libluajit-5.1.so.2
+            artifacts/SHA256SUMS
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
