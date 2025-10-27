@@ -48,6 +48,22 @@ RUN install -D -m 0644 /usr/local/lib/libluajit-5.1.so.2 /usr/lib/x86_64-linux-g
  && printf "/usr/local/lib\n/usr/lib/x86_64-linux-gnu\n" > /etc/ld.so.conf.d/zz-nginx-luajit.conf \
  && ldconfig
 
+ARG RESTY_CORE_VER=0.1.28
+ARG RESTY_LRU_VER=0.13
+
+ENV LUA_PATH="/usr/local/share/lua/5.1/?.lua;/usr/local/share/lua/5.1/?/init.lua;./?.lua;;"
+ENV LUA_CPATH="/usr/local/lib/lua/5.1/?.so;./?.so;;"
+
+RUN set -euo pipefail; \
+  mkdir -p /usr/local/share/lua/5.1 /usr/local/lib/lua/5.1; \
+  curl -fL -o /tmp/lua-resty-core.tar.gz https://github.com/openresty/lua-resty-core/archive/refs/tags/v${RESTY_CORE_VER}.tar.gz; \
+  tar -xzf /tmp/lua-resty-core.tar.gz -C /tmp; \
+  cp -R /tmp/lua-resty-core-*/lib/resty /usr/local/share/lua/5.1/; \
+  curl -fL -o /tmp/lua-resty-lrucache.tar.gz https://github.com/openresty/lua-resty-lrucache/archive/refs/tags/v${RESTY_LRU_VER}.tar.gz; \
+  tar -xzf /tmp/lua-resty-lrucache.tar.gz -C /tmp; \
+  cp -R /tmp/lua-resty-lrucache-*/lib/resty /usr/local/share/lua/5.1/; \
+  rm -rf /tmp/lua-resty-*
+
 ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${VTS_VERSION}/ngx_http_vhost_traffic_status_module.so ${MODULES_DIR}/
 ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${OTEL_VERSION}/ngx_otel_module.so ${MODULES_DIR}/
 ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${BROTLI_VERSION}/ngx_http_brotli_filter_module.so ${MODULES_DIR}/
