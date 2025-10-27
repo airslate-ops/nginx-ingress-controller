@@ -32,11 +32,11 @@ jobs:
             .
 
       - name: List artifacts
-        run: ls -lah artifacts
+        run: ls -lah artifacts && ls -lah artifacts/artifacts
 
       - name: Create checksums
         run: |
-          cd artifacts
+          cd artifacts/artifacts
           sha256sum * > SHA256SUMS
 
       - name: Upload Lua modules to GitHub Release
