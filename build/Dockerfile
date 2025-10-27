@@ -43,7 +43,7 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${LUA_VERSION}/libluajit-5.1.so.2 /usr/local/lib/
-RUN cp -a /usr/local/lib/libluajit-5.1.so.2 /usr/lib/x86_64-linux-gnu/ \
+RUN install -D -m 0644 /usr/local/lib/libluajit-5.1.so.2 /usr/lib/x86_64-linux-gnu/libluajit-5.1.so.2 \
  && ln -sf /usr/local/lib/libluajit-5.1.so.2 /usr/local/lib/libluajit-5.1.so \
  && printf "/usr/local/lib\n/usr/lib/x86_64-linux-gnu\n" > /etc/ld.so.conf.d/zz-nginx-luajit.conf \
  && ldconfig
