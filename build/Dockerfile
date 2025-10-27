@@ -58,14 +58,17 @@ ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/$
 RUN find ${MODULES_DIR} -type f -name '*.so' -exec chmod 0644 {} \; \
  && ldconfig
 
-RUN /bin/sh -ceu '\
-  cat > /tmp/min.conf <<EOF\n\
-load_module /usr/lib/nginx/modules/ndk_http_module.so;\n\
-load_module /usr/lib/nginx/modules/ngx_http_lua_module.so;\n\
-events {}\n\
-http {}\n\
-EOF\n\
-  nginx -t -c /tmp/min.conf \
+RUN /bin/sh -euc ' \
+  set -x; \
+  ls -l /usr/sbin/nginx || true; \
+  /usr/sbin/nginx -V; \
+  cat >/tmp/min.conf <<EOF
+load_module /usr/lib/nginx/modules/ndk_http_module.so;
+load_module /usr/lib/nginx/modules/ngx_http_lua_module.so;
+events {}
+http {}
+EOF
+  /usr/sbin/nginx -t -c /tmp/min.conf \
 '
 ############################################# NGINX files #############################################
 FROM scratch AS nginx-files
