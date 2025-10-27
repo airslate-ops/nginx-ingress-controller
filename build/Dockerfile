@@ -54,15 +54,23 @@ ARG RESTY_LRU_VER=0.13
 ENV LUA_PATH="/usr/local/share/lua/5.1/?.lua;/usr/local/share/lua/5.1/?/init.lua;./?.lua;;"
 ENV LUA_CPATH="/usr/local/lib/lua/5.1/?.so;./?.so;;"
 
-RUN set -euo pipefail; \
-  mkdir -p /usr/local/share/lua/5.1 /usr/local/lib/lua/5.1; \
-  curl -fL -o /tmp/lua-resty-core.tar.gz https://github.com/openresty/lua-resty-core/archive/refs/tags/v${RESTY_CORE_VER}.tar.gz; \
-  tar -xzf /tmp/lua-resty-core.tar.gz -C /tmp; \
-  cp -R /tmp/lua-resty-core-*/lib/resty /usr/local/share/lua/5.1/; \
-  curl -fL -o /tmp/lua-resty-lrucache.tar.gz https://github.com/openresty/lua-resty-lrucache/archive/refs/tags/v${RESTY_LRU_VER}.tar.gz; \
-  tar -xzf /tmp/lua-resty-lrucache.tar.gz -C /tmp; \
-  cp -R /tmp/lua-resty-lrucache-*/lib/resty /usr/local/share/lua/5.1/; \
-  rm -rf /tmp/lua-resty-*
+RUN set -eux; \
+  apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*; \
+  mkdir -p /usr/local/share/lua/5.1/resty; \
+  tmp="$(mktemp -d)"; \
+  # ---- resty-core ----
+  curl -fL -o "$tmp/core.tgz" "https://github.com/openresty/lua-resty-core/archive/refs/tags/v${RESTY_CORE_VER}.tar.gz"; \
+  mkdir -p "$tmp/core"; tar -xzf "$tmp/core.tgz" --strip-components=1 -C "$tmp/core"; \
+  test -d "$tmp/core/lib/resty"; \
+  cp -R "$tmp/core/lib/resty/"* /usr/local/share/lua/5.1/resty/; \
+  # ---- resty-lrucache ----
+  curl -fL -o "$tmp/lru.tgz" "https://github.com/openresty/lua-resty-lrucache/archive/refs/tags/v${RESTY_LRU_VER}.tar.gz"; \
+  mkdir -p "$tmp/lru"; tar -xzf "$tmp/lru.tgz" --strip-components=1 -C "$tmp/lru"; \
+  test -d "$tmp/lru/lib/resty"; \
+  cp -R "$tmp/lru/lib/resty/"* /usr/local/share/lua/5.1/resty/; \
+  # perms + cleanup
+  find /usr/local/share/lua/5.1 -type f -name '*.lua' -exec chmod 0644 {} \;; \
+  rm -rf "$tmp"
 
 ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${VTS_VERSION}/ngx_http_vhost_traffic_status_module.so ${MODULES_DIR}/
 ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${OTEL_VERSION}/ngx_otel_module.so ${MODULES_DIR}/
