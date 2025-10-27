@@ -3,16 +3,19 @@ name: Build and release Lua NGINX module
 on:
   workflow_dispatch:
   push:
-    tags:
-      - "lua-*"
+    tags: ["lua-*"]
+
+permissions:
+  contents: write
 
 jobs:
   build-lua:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -32,14 +35,23 @@ jobs:
             .
 
       - name: List artifacts
-        run: ls -lah artifacts && ls -lah artifacts/artifacts
+        run: |
+          ls -lah artifacts
+          file artifacts/* || true
 
       - name: Create checksums
         run: |
-          cd artifacts/artifacts
-          sha256sum * > SHA256SUMS
+          cd artifacts
+          test -f ndk_http_module.so
+          test -f ngx_http_lua_module.so
+          if [ -f libluajit-5.1.so.2 ]; then
+            sha256sum ndk_http_module.so ngx_http_lua_module.so libluajit-5.1.so.2 > SHA256SUMS
+          else
+            sha256sum ndk_http_module.so ngx_http_lua_module.so > SHA256SUMS
+          fi
+          cat SHA256SUMS
 
-      - name: Upload Lua modules to GitHub Release
+      - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
@@ -48,5 +60,13 @@ jobs:
             artifacts/ngx_http_lua_module.so
             artifacts/libluajit-5.1.so.2
             artifacts/SHA256SUMS
+          fail_on_unmatched_files: true
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload workflow artifacts (fallback)
+        uses: actions/upload-artifact@v4
+        with:
+          name: lua-nginx-mods-${{ github.ref_name }}
+          path: artifacts/*
