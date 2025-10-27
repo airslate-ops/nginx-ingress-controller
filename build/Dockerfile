@@ -42,6 +42,11 @@ RUN apt-get update \
       libpcre2-8-0 \
  && rm -rf /var/lib/apt/lists/*
 
+ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${LUA_VERSION}/libluajit-5.1.so.2 /usr/local/lib/
+RUN ln -sf /usr/local/lib/libluajit-5.1.so.2 /usr/local/lib/libluajit-5.1.so || true \
+ && printf "/usr/local/lib\n" > /etc/ld.so.conf.d/zz-nginx-luajit.conf \
+ && ldconfig
+
 ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${VTS_VERSION}/ngx_http_vhost_traffic_status_module.so ${MODULES_DIR}/
 ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${OTEL_VERSION}/ngx_otel_module.so ${MODULES_DIR}/
 ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${BROTLI_VERSION}/ngx_http_brotli_filter_module.so ${MODULES_DIR}/
