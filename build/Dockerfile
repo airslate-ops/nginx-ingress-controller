@@ -34,17 +34,18 @@ ARG LUA_VERSION=lua-1.0.11
 
 ENV MODULES_DIR=/usr/lib/nginx/modules
 
+
 RUN apt-get update \
  && apt-get install --no-install-recommends --no-install-suggests -y \
       libcap2-bin \
       libc-ares2 \
-      libluajit-5.1-2 \
       libpcre2-8-0 \
  && rm -rf /var/lib/apt/lists/*
 
 ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${LUA_VERSION}/libluajit-5.1.so.2 /usr/local/lib/
-RUN ln -sf /usr/local/lib/libluajit-5.1.so.2 /usr/local/lib/libluajit-5.1.so || true \
- && printf "/usr/local/lib\n" > /etc/ld.so.conf.d/zz-nginx-luajit.conf \
+RUN cp -a /usr/local/lib/libluajit-5.1.so.2 /usr/lib/x86_64-linux-gnu/ \
+ && ln -sf /usr/local/lib/libluajit-5.1.so.2 /usr/local/lib/libluajit-5.1.so \
+ && printf "/usr/local/lib\n/usr/lib/x86_64-linux-gnu\n" > /etc/ld.so.conf.d/zz-nginx-luajit.conf \
  && ldconfig
 
 ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${VTS_VERSION}/ngx_http_vhost_traffic_status_module.so ${MODULES_DIR}/
@@ -54,7 +55,18 @@ ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/$
 ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${LUA_VERSION}/ndk_http_module.so ${MODULES_DIR}/
 ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${LUA_VERSION}/ngx_http_lua_module.so ${MODULES_DIR}/
 
-RUN find ${MODULES_DIR} -type f -name '*.so' -exec chmod 0644 {} \; && ldconfig
+RUN find ${MODULES_DIR} -type f -name '*.so' -exec chmod 0644 {} \; \
+ && ldconfig
+
+RUN /bin/sh -ceu '\
+  cat > /tmp/min.conf <<EOF\n\
+load_module /usr/lib/nginx/modules/ndk_http_module.so;\n\
+load_module /usr/lib/nginx/modules/ngx_http_lua_module.so;\n\
+events {}\n\
+http {}\n\
+EOF\n\
+  nginx -t -c /tmp/min.conf \
+'
 ############################################# NGINX files #############################################
 FROM scratch AS nginx-files
 ARG IC_VERSION
