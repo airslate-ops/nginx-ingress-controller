@@ -1,42 +1,35 @@
 FROM nginx:1.27.4 as lua-builder
 
 RUN apt-get update && apt-get install -y \
-    build-essential \
-    zlib1g-dev \
-    libssl-dev \
-    git \
-    wget \
-    ca-certificates
+    build-essential zlib1g-dev libssl-dev git wget ca-certificates libreadline-dev \
+    libpcre2-dev \
+ && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src
 
-RUN wget https://github.com/PhilipHazel/pcre2/releases/download/pcre2-10.42/pcre2-10.42.tar.gz && \
-    tar zxvf pcre2-10.42.tar.gz && \
-    cd pcre2-10.42 && \
-    ./configure --prefix=/usr/local --enable-jit && \
-    make && make install
-
-RUN git clone https://github.com/openresty/luajit2.git --branch v2.1-agentzh --single-branch
+RUN git clone --branch v2.1-agentzh --single-branch https://github.com/openresty/luajit2.git
 WORKDIR /usr/src/luajit2
-RUN make && make install
+RUN make -j"$(nproc)" && make install
 
 ENV PATH="/usr/local/bin:${PATH}"
 ENV LD_LIBRARY_PATH="/usr/local/lib:${LD_LIBRARY_PATH}"
 
 WORKDIR /usr/src
-
-RUN git clone --branch v0.3.2 https://github.com/simpl/ngx_devel_kit.git
+RUN git clone --branch v0.3.2  https://github.com/simpl/ngx_devel_kit.git
 RUN git clone --branch v0.10.25 https://github.com/openresty/lua-nginx-module.git
 
-RUN wget http://nginx.org/download/nginx-1.27.4.tar.gz && tar zxvf nginx-1.27.4.tar.gz
+ARG NGINX_V=1.27.4
+RUN wget http://nginx.org/download/nginx-${NGINX_V}.tar.gz \
+ && tar zxf nginx-${NGINX_V}.tar.gz
 
-WORKDIR /usr/src/nginx-1.27.4
+WORKDIR /usr/src/nginx-${NGINX_V}
 ENV LUAJIT_LIB=/usr/local/lib
 ENV LUAJIT_INC=/usr/local/include/luajit-2.1
 
 RUN ./configure --with-compat \
-    --with-pcre=/usr/local \
     --add-dynamic-module=../ngx_devel_kit \
     --add-dynamic-module=../lua-nginx-module \
     --with-ld-opt="-Wl,-rpath,/usr/local/lib" \
-    && make modules
+ || { echo '--- CONFIG.LOG ---'; cat objs/autoconf.err 2>/dev/null || true; exit 1; }
+
+RUN make modules -j"$(nproc)"
