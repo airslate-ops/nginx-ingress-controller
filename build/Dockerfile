@@ -40,6 +40,7 @@ RUN apt-get update \
       libcap2-bin \
       libc-ares2 \
       libpcre2-8-0 \
+      google-perftools \
  && rm -rf /var/lib/apt/lists/*
 
 ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${LUA_VERSION}/libluajit-5.1.so.2 /usr/local/lib/
