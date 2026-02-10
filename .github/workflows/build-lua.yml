@@ -47,8 +47,14 @@ jobs:
           
           test -f ndk_http_module.so
           test -f ngx_http_lua_module.so
-          test -f usr/local/lib/lua/5.1/cjson.so
-          test -f usr/local/share/lua/5.1/cjson/safe.lua
+          CJSON_SO="$(find usr/local/lib/lua -type f -name 'cjson.so' -print -quit || true)"
+          CJSON_SAFE="$(find usr/local/share/lua -type f -path '*/cjson/safe.lua' -print -quit || true)"
+
+          echo "Found cjson.so:   ${CJSON_SO:-NOT FOUND}"
+          echo "Found safe.lua:   ${CJSON_SAFE:-NOT FOUND}"
+
+          test -n "$CJSON_SO"
+          test -n "$CJSON_SAFE"
 
           if [ -f libluajit-5.1.so.2 ]; then
             sha256sum \
@@ -66,8 +72,6 @@ jobs:
               usr/local/share/lua/5.1/cjson/safe.lua \
               > SHA256SUMS
           fi
-          test -f usr/local/lib/lua/5.1/cjson.so
-          test -f usr/local/share/lua/5.1/cjson/safe.lua
           cat SHA256SUMS
 
       - name: Upload to GitHub Release
