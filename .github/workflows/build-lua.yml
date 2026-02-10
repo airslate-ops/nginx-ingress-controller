@@ -44,11 +44,30 @@ jobs:
           cd artifacts
           test -f ndk_http_module.so
           test -f ngx_http_lua_module.so
+          
+          test -f ndk_http_module.so
+          test -f ngx_http_lua_module.so
+          test -f usr/local/lib/lua/5.1/cjson.so
+          test -f usr/local/share/lua/5.1/cjson/safe.lua
+
           if [ -f libluajit-5.1.so.2 ]; then
-            sha256sum ndk_http_module.so ngx_http_lua_module.so libluajit-5.1.so.2 > SHA256SUMS
+            sha256sum \
+              ndk_http_module.so \
+              ngx_http_lua_module.so \
+              libluajit-5.1.so.2 \
+              usr/local/lib/lua/5.1/cjson.so \
+              usr/local/share/lua/5.1/cjson/safe.lua \
+              > SHA256SUMS
           else
-            sha256sum ndk_http_module.so ngx_http_lua_module.so > SHA256SUMS
+            sha256sum \
+              ndk_http_module.so \
+              ngx_http_lua_module.so \
+              usr/local/lib/lua/5.1/cjson.so \
+              usr/local/share/lua/5.1/cjson/safe.lua \
+              > SHA256SUMS
           fi
+          test -f usr/local/lib/lua/5.1/cjson.so
+          test -f usr/local/share/lua/5.1/cjson/safe.lua
           cat SHA256SUMS
 
       - name: Upload to GitHub Release
@@ -59,6 +78,8 @@ jobs:
             artifacts/ndk_http_module.so
             artifacts/ngx_http_lua_module.so
             artifacts/libluajit-5.1.so.2
+            artifacts/usr/local/lib/lua/5.1/cjson.so
+            artifacts/usr/local/share/lua/5.1/cjson/**
             artifacts/SHA256SUMS
           fail_on_unmatched_files: true
           generate_release_notes: true
@@ -69,4 +90,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lua-nginx-mods-${{ github.ref_name }}
-          path: artifacts/*
+          path: artifacts/**
