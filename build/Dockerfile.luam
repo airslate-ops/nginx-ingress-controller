@@ -27,8 +27,11 @@ RUN install -d /usr/local/share/lua/5.1/cjson \
 RUN set -eux; \
     install -d /usr/local/share/lua/5.1/cjson; \
     if [ -d /usr/src/lua-cjson/lua/cjson ]; then \
-      cp -v /usr/src/lua-cjson/lua/cjson/*.lua /usr/local/share/lua/5.1/cjson/ || true; \
+      find /usr/src/lua-cjson/lua/cjson -maxdepth 1 -type f -name '*.lua' -exec cp -v {} /usr/local/share/lua/5.1/cjson/ \;; \
     fi; \
+    chmod 0644 /usr/local/share/lua/5.1/cjson/*.lua || true
+
+RUN set -eux; \
     if [ ! -f /usr/local/share/lua/5.1/cjson/safe.lua ]; then \
       cat > /usr/local/share/lua/5.1/cjson/safe.lua <<'EOF'
 local cjson = require "cjson"
@@ -57,7 +60,7 @@ end
 return _M
 EOF
     fi; \
-    chmod 0644 /usr/local/share/lua/5.1/cjson/*.lua
+    chmod 0644 /usr/local/share/lua/5.1/cjson/safe.lua
 
 ARG NDK_V=v0.3.3
 ARG LUA_NGX_V=v0.10.27
