@@ -30,10 +30,9 @@ FROM nginx:1.27.4@sha256:09369da6b10306312cd908661320086bf87fbae1b6b0c49a1f50ba5
 ARG VTS_VERSION=vts-1.0.0
 ARG OTEL_VERSION=otel-1.0.0
 ARG BROTLI_VERSION=brotli-1.0.1
-ARG LUA_VERSION=lua-1.0.11
+ARG LUA_VERSION=lua-1.1.0
 
 ENV MODULES_DIR=/usr/lib/nginx/modules
-
 
 RUN apt-get update \
  && apt-get install --no-install-recommends --no-install-suggests -y \
@@ -74,6 +73,23 @@ RUN set -eux; \
   find /usr/local/share/lua/5.1 -type f -name '*.lua' -exec chmod 0644 {} \;; \
   rm -rf "$tmp"
 
+RUN install -d /usr/local/lib/lua/5.1 /usr/local/share/lua/5.1/cjson
+
+# cjson.so goes to LUA_CPATH location
+ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${LUA_VERSION}/cjson.so \
+    /usr/local/lib/lua/5.1/cjson.so
+
+# cjson.safe and helpers go to LUA_PATH location
+ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${LUA_VERSION}/safe.lua \
+    /usr/local/share/lua/5.1/cjson/safe.lua
+ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${LUA_VERSION}/util.lua \
+    /usr/local/share/lua/5.1/cjson/util.lua
+
+RUN chmod 0644 \
+      /usr/local/lib/lua/5.1/cjson.so \
+      /usr/local/share/lua/5.1/cjson/safe.lua \
+      /usr/local/share/lua/5.1/cjson/util.lua
+
 ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${VTS_VERSION}/ngx_http_vhost_traffic_status_module.so ${MODULES_DIR}/
 ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${OTEL_VERSION}/ngx_otel_module.so ${MODULES_DIR}/
 ADD https://github.com/airslate-ops/nginx-ingress-controller/releases/download/${BROTLI_VERSION}/ngx_http_brotli_filter_module.so ${MODULES_DIR}/
@@ -91,7 +107,11 @@ RUN /bin/sh -euc '\
     "load_module /usr/lib/nginx/modules/ndk_http_module.so;" \
     "load_module /usr/lib/nginx/modules/ngx_http_lua_module.so;" \
     "events {}" \
-    "http {}" \
+    "http {" \
+    "  lua_package_path \"${LUA_PATH}\";" \
+    "  lua_package_cpath \"${LUA_CPATH}\";" \
+    "  init_by_lua_block { local x = require(\"cjson.safe\"); assert(x and x.encode and x.decode) }" \
+    "}" \
   > /tmp/min.conf; \
   /usr/sbin/nginx -t -c /tmp/min.conf \
 '
