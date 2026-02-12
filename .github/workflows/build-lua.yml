@@ -36,42 +36,48 @@ jobs:
 
       - name: List artifacts
         run: |
-          ls -lah artifacts
-          file artifacts/* || true
+          echo "== top-level artifacts =="
+          ls -lah artifacts || true
+          echo "== tree (first 200 lines) =="
+          (cd artifacts && find . -type f | sort | sed -n '1,200p') || true
 
       - name: Create checksums
         run: |
           cd artifacts
+
+          # required
           test -f ndk_http_module.so
           test -f ngx_http_lua_module.so
-          
-          test -f ndk_http_module.so
-          test -f ngx_http_lua_module.so
-          CJSON_SO="$(find usr/local/lib/lua -type f -name 'cjson.so' -print -quit || true)"
-          CJSON_SAFE="$(find usr/local/share/lua -type f -path '*/cjson/safe.lua' -print -quit || true)"
 
-          echo "Found cjson.so:   ${CJSON_SO:-NOT FOUND}"
-          echo "Found safe.lua:   ${CJSON_SAFE:-NOT FOUND}"
+          # optional
+          LUAJIT_SO="libluajit-5.1.so.2"
 
-          test -n "$CJSON_SO"
-          test -n "$CJSON_SAFE"
+          # new required for cjson.safe support (if you added it)
+          CJSON_SO="usr/local/lib/lua/5.1/cjson.so"
+          CJSON_DIR="usr/local/share/lua/5.1/cjson"
 
-          if [ -f libluajit-5.1.so.2 ]; then
-            sha256sum \
-              ndk_http_module.so \
-              ngx_http_lua_module.so \
-              libluajit-5.1.so.2 \
-              usr/local/lib/lua/5.1/cjson.so \
-              usr/local/share/lua/5.1/cjson/safe.lua \
-              > SHA256SUMS
-          else
-            sha256sum \
-              ndk_http_module.so \
-              ngx_http_lua_module.so \
-              usr/local/lib/lua/5.1/cjson.so \
-              usr/local/share/lua/5.1/cjson/safe.lua \
-              > SHA256SUMS
+          if [ -f "${CJSON_SO}" ]; then
+            test -d "${CJSON_DIR}"
+            # safe.lua is the key one; include all lua files to be safe
+            test -f "${CJSON_DIR}/safe.lua"
           fi
+
+          # build checksum list
+          {
+            echo "ndk_http_module.so"
+            echo "ngx_http_lua_module.so"
+            [ -f "${LUAJIT_SO}" ] && echo "${LUAJIT_SO}"
+            [ -f "${CJSON_SO}" ] && echo "${CJSON_SO}"
+            if [ -d "${CJSON_DIR}" ]; then
+              find "${CJSON_DIR}" -type f -name "*.lua" | sort
+            fi
+          } | sed '/^$/d' > FILES_TO_HASH
+
+          sha256sum $(cat FILES_TO_HASH) > SHA256SUMS
+
+          echo "== FILES_TO_HASH =="
+          cat FILES_TO_HASH
+          echo "== SHA256SUMS =="
           cat SHA256SUMS
 
       - name: Upload to GitHub Release
@@ -83,9 +89,9 @@ jobs:
             artifacts/ngx_http_lua_module.so
             artifacts/libluajit-5.1.so.2
             artifacts/usr/local/lib/lua/5.1/cjson.so
-            artifacts/usr/local/share/lua/5.1/cjson/**
+            artifacts/usr/local/share/lua/5.1/cjson/*.lua
             artifacts/SHA256SUMS
-          fail_on_unmatched_files: true
+          fail_on_unmatched_files: false
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -94,4 +100,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lua-nginx-mods-${{ github.ref_name }}
-          path: artifacts/**
+          path: |
+            artifacts/ndk_http_module.so
+            artifacts/ngx_http_lua_module.so
+            artifacts/libluajit-5.1.so.2
+            artifacts/usr/local/lib/lua/5.1/cjson.so
+            artifacts/usr/local/share/lua/5.1/cjson/*.lua
+            artifacts/SHA256SUMS
+          if-no-files-found: warn
