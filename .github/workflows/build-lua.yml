@@ -52,17 +52,13 @@ jobs:
           # optional
           LUAJIT_SO="libluajit-5.1.so.2"
 
-          # new required for cjson.safe support (if you added it)
           CJSON_SO="usr/local/lib/lua/5.1/cjson.so"
           CJSON_DIR="usr/local/share/lua/5.1/cjson"
 
           if [ -f "${CJSON_SO}" ]; then
             test -d "${CJSON_DIR}"
-            # safe.lua is the key one; include all lua files to be safe
-            test -f "${CJSON_DIR}/safe.lua"
           fi
 
-          # build checksum list
           {
             echo "ndk_http_module.so"
             echo "ngx_http_lua_module.so"
@@ -71,9 +67,9 @@ jobs:
             if [ -d "${CJSON_DIR}" ]; then
               find "${CJSON_DIR}" -type f -name "*.lua" | sort
             fi
-          } | sed '/^$/d' > FILES_TO_HASH
+            } | sed '/^$/d' > FILES_TO_HASH
 
-          sha256sum $(cat FILES_TO_HASH) > SHA256SUMS
+          xargs -d '\n' sha256sum < FILES_TO_HASH > SHA256SUMS
 
           echo "== FILES_TO_HASH =="
           cat FILES_TO_HASH
