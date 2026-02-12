@@ -24,6 +24,41 @@ RUN make -j"$(nproc)" LUA_INCLUDE_DIR="${LUAJIT_INC}" \
 RUN install -d /usr/local/share/lua/5.1/cjson \
  && cp -v /usr/src/lua-cjson/lua/cjson/*.lua /usr/local/share/lua/5.1/cjson/
 
+RUN set -eux; \
+    install -d /usr/local/share/lua/5.1/cjson; \
+    if [ -d /usr/src/lua-cjson/lua/cjson ]; then \
+      cp -v /usr/src/lua-cjson/lua/cjson/*.lua /usr/local/share/lua/5.1/cjson/ || true; \
+    fi; \
+    if [ ! -f /usr/local/share/lua/5.1/cjson/safe.lua ]; then \
+      cat > /usr/local/share/lua/5.1/cjson/safe.lua <<'EOF'
+local cjson = require "cjson"
+
+local _M = {}
+for k, v in pairs(cjson) do
+  _M[k] = v
+end
+
+local function _pcall(f, ...)
+  local ok, res = pcall(f, ...)
+  if ok then
+    return res
+  end
+  return nil, res
+end
+
+function _M.encode(...)
+  return _pcall(cjson.encode, ...)
+end
+
+function _M.decode(...)
+  return _pcall(cjson.decode, ...)
+end
+
+return _M
+EOF
+    fi; \
+    chmod 0644 /usr/local/share/lua/5.1/cjson/*.lua
+
 ARG NDK_V=v0.3.3
 ARG LUA_NGX_V=v0.10.27
 WORKDIR /usr/src
@@ -42,9 +77,12 @@ RUN ./configure --with-compat \
     --with-ld-opt="-Wl,-rpath,/usr/local/lib"
 RUN make modules -j"$(nproc)"
 
+RUN /usr/local/bin/luajit -e 'local x=require("cjson.safe"); assert(x and x.encode and x.decode); print("cjson.safe OK")'
+
 FROM scratch AS out
 COPY --from=build /usr/src/nginx-1.27.4/objs/ndk_http_module.so /ndk_http_module.so
 COPY --from=build /usr/src/nginx-1.27.4/objs/ngx_http_lua_module.so /ngx_http_lua_module.so
 COPY --from=build /usr/local/lib/libluajit-5.1.so.2 /libluajit-5.1.so.2
 COPY --from=build /usr/local/lib/lua/5.1/cjson.so /usr/local/lib/lua/5.1/cjson.so
 COPY --from=build /usr/local/share/lua/5.1/cjson /usr/local/share/lua/5.1/cjson
+

@@ -41,33 +41,38 @@ jobs:
           echo "== tree (first 200 lines) =="
           (cd artifacts && find . -type f | sort | sed -n '1,200p') || true
 
-      - name: Create checksums
+      - name: Validate required artifacts
         run: |
+          set -euo pipefail
           cd artifacts
 
-          # required
+          # core modules
           test -f ndk_http_module.so
           test -f ngx_http_lua_module.so
 
-          # optional
-          LUAJIT_SO="libluajit-5.1.so.2"
+          # luajit shared lib (your release expects it)
+          test -f libluajit-5.1.so.2
 
+          # lua-cjson pieces for `require "cjson.safe"`
+          test -f usr/local/lib/lua/5.1/cjson.so
+          test -f usr/local/share/lua/5.1/cjson/safe.lua
+
+      - name: Create checksums
+        run: |
+          set -euo pipefail
+          cd artifacts
+
+          LUAJIT_SO="libluajit-5.1.so.2"
           CJSON_SO="usr/local/lib/lua/5.1/cjson.so"
           CJSON_DIR="usr/local/share/lua/5.1/cjson"
-
-          if [ -f "${CJSON_SO}" ]; then
-            test -d "${CJSON_DIR}"
-          fi
 
           {
             echo "ndk_http_module.so"
             echo "ngx_http_lua_module.so"
-            [ -f "${LUAJIT_SO}" ] && echo "${LUAJIT_SO}"
-            [ -f "${CJSON_SO}" ] && echo "${CJSON_SO}"
-            if [ -d "${CJSON_DIR}" ]; then
-              find "${CJSON_DIR}" -type f -name "*.lua" | sort
-            fi
-            } | sed '/^$/d' > FILES_TO_HASH
+            echo "${LUAJIT_SO}"
+            echo "${CJSON_SO}"
+            find "${CJSON_DIR}" -type f -name "*.lua" | sort
+          } > FILES_TO_HASH
 
           xargs -d '\n' sha256sum < FILES_TO_HASH > SHA256SUMS
 
@@ -87,7 +92,7 @@ jobs:
             artifacts/usr/local/lib/lua/5.1/cjson.so
             artifacts/usr/local/share/lua/5.1/cjson/*.lua
             artifacts/SHA256SUMS
-          fail_on_unmatched_files: false
+          fail_on_unmatched_files: true
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -103,4 +108,4 @@ jobs:
             artifacts/usr/local/lib/lua/5.1/cjson.so
             artifacts/usr/local/share/lua/5.1/cjson/*.lua
             artifacts/SHA256SUMS
-          if-no-files-found: warn
+          if-no-files-found: error
