@@ -8,6 +8,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /usr/src
 
+# ----------------------------
+# LuaJIT
+# ----------------------------
 RUN git clone --branch v2.1-agentzh --single-branch https://github.com/openresty/luajit2.git
 WORKDIR /usr/src/luajit2
 RUN make -j"$(nproc)" && make install
@@ -15,15 +18,17 @@ RUN make -j"$(nproc)" && make install
 ENV LUAJIT_LIB=/usr/local/lib
 ENV LUAJIT_INC=/usr/local/include/luajit-2.1
 
+# ----------------------------
+# lua-cjson (cjson.so + cjson/safe.lua)
+# ----------------------------
 ARG LUA_CJSON_V=2.1.0.10
 WORKDIR /usr/src
 RUN git clone --branch "${LUA_CJSON_V}" --single-branch https://github.com/openresty/lua-cjson.git
 WORKDIR /usr/src/lua-cjson
 RUN make -j"$(nproc)" LUA_INCLUDE_DIR="${LUAJIT_INC}" \
  && make install LUA_INCLUDE_DIR="${LUAJIT_INC}" LUA_LIB_DIR="${LUAJIT_LIB}"
-RUN install -d /usr/local/share/lua/5.1/cjson \
- && cp -v /usr/src/lua-cjson/lua/cjson/*.lua /usr/local/share/lua/5.1/cjson/
 
+# Copy Lua helpers if present (util.lua etc.), and always provide safe.lua
 RUN set -eux; \
     install -d /usr/local/share/lua/5.1/cjson; \
     if [ -d /usr/src/lua-cjson/lua/cjson ]; then \
@@ -31,9 +36,7 @@ RUN set -eux; \
     fi; \
     chmod 0644 /usr/local/share/lua/5.1/cjson/*.lua || true
 
-RUN set -eux; \
-    if [ ! -f /usr/local/share/lua/5.1/cjson/safe.lua ]; then \
-      cat > /usr/local/share/lua/5.1/cjson/safe.lua <<'EOF'
+RUN cat > /usr/local/share/lua/5.1/cjson/safe.lua <<'EOF'
 local cjson = require "cjson"
 
 local _M = {}
@@ -59,33 +62,43 @@ end
 
 return _M
 EOF
-    fi; \
-    chmod 0644 /usr/local/share/lua/5.1/cjson/safe.lua
 
+RUN chmod 0644 /usr/local/share/lua/5.1/cjson/safe.lua
+
+# ----------------------------
+# NDK + lua-nginx-module (dynamic)
+# ----------------------------
 ARG NDK_V=v0.3.3
 ARG LUA_NGX_V=v0.10.27
 WORKDIR /usr/src
 RUN git clone --branch "${NDK_V}" --single-branch https://github.com/simpl/ngx_devel_kit.git
 RUN git clone --branch "${LUA_NGX_V}" --single-branch https://github.com/openresty/lua-nginx-module.git
 
+# ----------------------------
+# Build NGINX dynamic modules with --with-compat
+# ----------------------------
 ARG NGINX_V=1.27.4
 RUN wget -O "nginx-${NGINX_V}.tar.gz" "http://nginx.org/download/nginx-${NGINX_V}.tar.gz" \
  && tar zxf "nginx-${NGINX_V}.tar.gz"
 
 WORKDIR /usr/src/nginx-${NGINX_V}
-
 RUN ./configure --with-compat \
     --add-dynamic-module=../ngx_devel_kit \
     --add-dynamic-module=../lua-nginx-module \
     --with-ld-opt="-Wl,-rpath,/usr/local/lib"
 RUN make modules -j"$(nproc)"
 
+# ----------------------------
+# Smoke test: ensure cjson.safe is loadable by LuaJIT
+# ----------------------------
 RUN /usr/local/bin/luajit -e 'local x=require("cjson.safe"); assert(x and x.encode and x.decode); print("cjson.safe OK")'
 
+# ----------------------------
+# Export artifacts
+# ----------------------------
 FROM scratch AS out
 COPY --from=build /usr/src/nginx-1.27.4/objs/ndk_http_module.so /ndk_http_module.so
 COPY --from=build /usr/src/nginx-1.27.4/objs/ngx_http_lua_module.so /ngx_http_lua_module.so
 COPY --from=build /usr/local/lib/libluajit-5.1.so.2 /libluajit-5.1.so.2
 COPY --from=build /usr/local/lib/lua/5.1/cjson.so /usr/local/lib/lua/5.1/cjson.so
 COPY --from=build /usr/local/share/lua/5.1/cjson /usr/local/share/lua/5.1/cjson
-
