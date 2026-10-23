@@ -30,7 +30,7 @@ jobs:
         run: |
           docker build -f build/Dockerfile\
             --build-arg BUILD_OS=debian \
-            --build-arg DOWNLOAD_TAG=edge \
+            --build-arg DOWNLOAD_TAG=5.4.1@sha256:7398321941fd7439624e35e67d8a43361694a91a14d58c71f7d6cec9e25853df \
             --build-arg IMAGE_NAME=${{ env.IMAGE_NAME }} \
             -t ${{ env.IMAGE_NAME }}:${{ env.BUILD_ID }} .
 
