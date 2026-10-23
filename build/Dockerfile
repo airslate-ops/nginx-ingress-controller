@@ -19,18 +19,18 @@ FROM golang:1.24-alpine@sha256:7772cb5322baa875edd74705556d08f0eeca7b9c4b5367754
 
 
 ############################################# Base image for Alpine #############################################
-FROM nginx:1.27.4-alpine@sha256:4ff102c5d78d254a6f0da062b3cf39eaf07f01eec0927fd21e219d0af8bc0591 AS alpine
+FROM nginx:1.30.6-alpine@sha256:47928bf67eb62a1863cb08d9ecb52d3e704304ba614eaee17884204677702951 AS alpine
 
 RUN apk add --no-cache libcap libstdc++
 
 
 ############################################# Base image for Debian #############################################
-FROM nginx:1.27.4@sha256:09369da6b10306312cd908661320086bf87fbae1b6b0c49a1f50ba531fef2eab AS debian
+FROM nginx:1.30.6@sha256:a7675fcee220f59b4a99f7098c06a0d5d999c2c0ee37c0211efb780536e5cb20 AS debian
 
-ARG VTS_VERSION=vts-1.0.0
-ARG OTEL_VERSION=otel-1.0.0
-ARG BROTLI_VERSION=brotli-1.0.1
-ARG LUA_VERSION=lua-1.1.0
+ARG VTS_VERSION=vts-1.1.0
+ARG OTEL_VERSION=otel-1.1.0
+ARG BROTLI_VERSION=brotli-1.1.0
+ARG LUA_VERSION=lua-1.2.0
 
 ENV MODULES_DIR=/usr/lib/nginx/modules
 
@@ -49,7 +49,7 @@ RUN install -D -m 0644 /usr/local/lib/libluajit-5.1.so.2 /usr/lib/x86_64-linux-g
  && printf "/usr/local/lib\n/usr/lib/x86_64-linux-gnu\n" > /etc/ld.so.conf.d/zz-nginx-luajit.conf \
  && ldconfig
 
-ARG RESTY_CORE_VER=0.1.29
+ARG RESTY_CORE_VER=0.1.32R1
 ARG RESTY_LRU_VER=0.13
 
 ENV LUA_PATH="/usr/local/share/lua/5.1/?.lua;/usr/local/share/lua/5.1/?/init.lua;./?.lua;;"
