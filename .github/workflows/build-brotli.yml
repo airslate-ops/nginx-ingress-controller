@@ -18,8 +18,8 @@ jobs:
         run: |
           docker build -f build/Dockerfile.brotli -t brotli-builder .
           docker create --name extract brotli-builder
-          docker cp extract:/usr/src/nginx-1.27.4/objs/ngx_http_brotli_filter_module.so .
-          docker cp extract:/usr/src/nginx-1.27.4/objs/ngx_http_brotli_static_module.so .
+          docker cp extract:/usr/src/nginx-1.30.6/objs/ngx_http_brotli_filter_module.so .
+          docker cp extract:/usr/src/nginx-1.30.6/objs/ngx_http_brotli_static_module.so .
           docker rm extract
 
       - name: Upload Brotli modules to GitHub Release
