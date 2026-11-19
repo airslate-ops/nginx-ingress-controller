@@ -19,18 +19,18 @@ FROM golang:1.24-alpine@sha256:7772cb5322baa875edd74705556d08f0eeca7b9c4b5367754
 
 
 ############################################# Base image for Alpine #############################################
-FROM nginx:1.30.6-alpine@sha256:47928bf67eb62a1863cb08d9ecb52d3e704304ba614eaee17884204677702951 AS alpine
+FROM nginx:1.30.7-alpine@sha256:bef154735288bc38d99fac41ae63730684bcc661503673a04a0f9bc526ba8598 AS alpine
 
 RUN apk add --no-cache libcap libstdc++
 
 
 ############################################# Base image for Debian #############################################
-FROM nginx:1.30.6@sha256:a7675fcee220f59b4a99f7098c06a0d5d999c2c0ee37c0211efb780536e5cb20 AS debian
+FROM nginx:1.30.7@sha256:7fad6c0dff97965adbddf28027d934b111fc0221a554315dc274712f3fba24d3 AS debian
 
-ARG VTS_VERSION=vts-1.1.0
-ARG OTEL_VERSION=otel-1.1.0
-ARG BROTLI_VERSION=brotli-1.1.0
-ARG LUA_VERSION=lua-1.2.0
+ARG VTS_VERSION=vts-1.2.0
+ARG OTEL_VERSION=otel-1.2.0
+ARG BROTLI_VERSION=brotli-1.2.0
+ARG LUA_VERSION=lua-1.3.0
 
 ENV MODULES_DIR=/usr/lib/nginx/modules
 

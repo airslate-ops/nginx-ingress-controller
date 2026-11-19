@@ -1,4 +1,4 @@
-FROM nginx:1.30.6 as brotli-builder
+FROM nginx:1.30.7 as brotli-builder
 
 RUN apt-get update && apt-get install -y \
     build-essential \
@@ -17,9 +17,9 @@ WORKDIR /usr/src/ngx_brotli/deps/brotli
 RUN mkdir out && cd out && cmake .. && make
 
 WORKDIR /usr/src
-RUN wget https://nginx.org/download/nginx-1.30.6.tar.gz && \
-    tar zxvf nginx-1.30.6.tar.gz
+RUN wget https://nginx.org/download/nginx-1.30.7.tar.gz && \
+    tar zxvf nginx-1.30.7.tar.gz
 
-WORKDIR /usr/src/nginx-1.30.6
+WORKDIR /usr/src/nginx-1.30.7
 RUN ./configure --with-compat --add-dynamic-module=../ngx_brotli && \
     make modules
